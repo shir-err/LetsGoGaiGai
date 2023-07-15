@@ -63,7 +63,7 @@ The user is able to:
 The bot is able to:
 1. Send automated messages to the group and to individuals to remind them of the planned activity
 
-**Status : In Progress [:orange_circle:]**
+**Status : In Progress [:green_circle:]**
 
 ### Collate Reviews from Participants (Optional)
 After the day of the activity, Telegram Bot will initiate a conversation with the participants and ask them to review the activity and upload images of the activity, if any. This would be kept in the Telegram Bot’s system for future reference of all its users who wish to view the reviews and images of past participants.
