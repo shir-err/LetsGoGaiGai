@@ -63,7 +63,7 @@ The user is able to:
 The bot is able to:
 1. Send automated messages to the group and to individuals to remind them of the planned activity
 
-**Status : In Progress [:green_circle:]**
+**Status : Completed [:green_circle:]**
 
 ### Collate Reviews from Participants (Optional)
 After the day of the activity, Telegram Bot will initiate a conversation with the participants and ask them to review the activity and upload images of the activity, if any. This would be kept in the Telegram Bot’s system for future reference of all its users who wish to view the reviews and images of past participants.
@@ -82,3 +82,11 @@ The user is able to:
 1. View their reviews and other reviews (if any) of the selected activity
 
 **Status : Not Started [:red_circle:]**
+
+### Set Scheduled Reminders for Groups to Plan Events (Optional)
+The Telegram Bot is able to send a scheduled message to participants to remind them to plan an activity with the group. This will cater to users who are interested in having monthly meetings, for example, and encourage more consistent meetups despite everyone's busy schedules.
+
+The user is able to:
+1. Set a reminder for the bot to prompt them to organize a meetup
+
+**Status : In Progress [:orange_circle:]**
