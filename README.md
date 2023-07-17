@@ -89,4 +89,4 @@ The Telegram Bot is able to send a scheduled message to participants to remind t
 The user is able to:
 1. Set a reminder for the bot to prompt them to organize a meetup
 
-**Status : In Progress [:green_circle:]**
+**Status : Completed [:green_circle:]**
