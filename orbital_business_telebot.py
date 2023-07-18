@@ -5,11 +5,13 @@ import warnings
 warnings.filterwarnings('ignore')
 
 import telebot
+import schedule
 import random
 import logging
 import datetime
-from datetime import date
+from datetime import date, timedelta
 from dateutil.parser import parse
+from collections import Counter
 
 ##pip install python-telegram-bot
 ##pip install python-telegram-bot-calendar
@@ -27,9 +29,9 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 logger = logging.getLogger(__name__)
 
 # Stages
-FIRST, SECOND, THIRD, FOURTH, FIFTH, SIXTH, USER_INPUT_ACTIVITY, CALENDAR, TIME, INFORMATION, MAIN, FOOD_LST, CONSOLIDATE, POLL_ANSWERS, USER_INPUT_SCHEDULES, GROUP_INPUT_DATE, GROUP_INPUT_ACTIVITY, USER_INPUT_GOOGLE_CALENDAR, REMIND, USER_INPUT_REMINDER = range(20)
+FIRST, SECOND, THIRD, FOURTH, FIFTH, SIXTH, USER_INPUT_ACTIVITY, CALENDAR, TIME, INFORMATION, MAIN, FOOD_LST, CONSOLIDATE, POLL_ANSWERS, USER_INPUT_SCHEDULES, GROUP_INPUT_DATE, GROUP_INPUT_ACTIVITY, USER_INPUT_GOOGLE_CALENDAR, REMIND, USER_INPUT_REMINDER, USER_INPUT_REVIEWS, REVIEWS, PAST_REVIEW = range(23)
 # Callback data
-PLAN, UPCOMING, PAST, RESTART, HELP, YES, NO, CHANGE_DATE, KEEP_DATE, KEEP_TIME, KEEP_DATE_2, ACTIVITY, CATEGORY, ADVENTURE, ATTRACTION, FOOD, OTHER, ACTIVITY_OPTION_1, ACTIVITY_OPTION_2, ACTIVITY_OPTION_3, ACTIVITY_RESULT_1, ACTIVITY_RESULT_2, ACTIVITY_RESULT_3, MORE, SELECTED, DECLINE, MENU, END, BACK, SCHEDULES, INPUT_PERIOD, LINK_GOOGLE_CALENDAR, INPUT_REMINDER_DATE, SET_REMINDER, NO_REMINDER = range(35)
+PLAN, UPCOMING, PAST, HELP, YES, NO, CHANGE_DATE, KEEP_DATE, KEEP_TIME, KEEP_DATE_2, ACTIVITY, CATEGORY, ADVENTURE, ATTRACTION, FOOD, OTHER, ACTIVITY_OPTION_1, ACTIVITY_OPTION_2, ACTIVITY_OPTION_3, ACTIVITY_RESULT_1, ACTIVITY_RESULT_2, ACTIVITY_RESULT_3, MORE, SELECTED, DECLINE, MENU, END, BACK, SCHEDULES, INPUT_PERIOD, LINK_GOOGLE_CALENDAR, INPUT_REMINDER_DATE, NO_REMINDER, MONTHLY_REMINDER = range(34)
 CONSOLIDATE_POLL, GROUP_ACTIVITY, GROUP_DATE, SELECT_ACTIVITY, GROUP_SESSION, GROUP_MENU, GROUP_CATEGORY, GROUP_DATE = range(8)
 
 ########################################
@@ -40,6 +42,9 @@ START = []
 GROUP = []
 DONE = []
 
+ID_LIST = []
+GROUP_ID = []
+CONTROL_MAN = []
 
 DATES = []
 TYPED_SCHEDULE = []
@@ -55,6 +60,7 @@ food_time = ['Breakfast Menu', 'Lunch Menu', 'Dinner Menu']
 SELECTED_FOOD = []
 
 ACTIVITIES = []
+SELECT_PAST_ACTIVITY = []
 
 CONFIRM_MEETING = []
 
@@ -62,6 +68,14 @@ TOTAL_VOTER_COUNT = []
 POLL_LIST = []
 
 REMINDER_DATE = []
+
+PAST_ACTIVITY = []
+REVIEW_LST = []
+RATING_LIST = ['\u2B50', '\u2B50 \u2B50', '\u2B50 \u2B50 \u2B50', '\u2B50 \u2B50 \u2B50 \u2B50', '\u2B50 \u2B50 \u2B50 \u2B50 \u2B50']
+USER_REVIEW = {}
+
+review_hour = 17
+review_min = 1
 
 ########################################
 ########### COMMON COMMANDS ############
@@ -74,17 +88,18 @@ def start_command(update, context):
     if message_type == 'group':
         group_name = update.message.chat.title
         GROUP.append(group_name)
+        GROUP_ID.append(update.message.chat.id)
+        CONTROL_MAN.append(user.first_name)
         logger.info("User %s started the conversation in %s.", user.first_name, group_name)
         numOfMembers = context.bot.get_chat_member_count(update.message.chat.id)
         TOTAL_VOTER_COUNT.append(numOfMembers - 1) #dont count the bot
-        if BOT_USERNAME in text:
-            keyboard = [
-                [InlineKeyboardButton("View Results", callback_data=str(CONSOLIDATE_POLL))],
-            ]
-            reply_markup = InlineKeyboardMarkup(keyboard)
-            update.message.reply_text(text=f"Hello Everyone! Welcome to GaiGai Bot! \U0001F60A \nI am here to help you all plan a meet-up session. \n\nClick the link below and it will bring you to a private message with me to start planning! \nhttp://telegram.me/gaigai_bot?start=start \n\nYou may also click 'View Results' to look at the consolidated date and activity! \n\nNOTE: Only {user.first_name} can click on the buttons and reply to my message.", 
-                                    reply_markup=reply_markup)
-            return CONSOLIDATE          
+        keyboard = [
+            [InlineKeyboardButton("View Results", callback_data=str(CONSOLIDATE_POLL))],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        update.message.reply_text(text=f"Hello Everyone! Welcome to GaiGai Bot! \U0001F60A \nI am here to help you all plan a meet-up session. \n\nClick the link below and it will bring you to a private message with me to start planning! \nhttp://telegram.me/gaigai_bot?start=start \n\nYou may also click 'View Results' to look at the consolidated date and activity!", 
+                                reply_markup=reply_markup)
+        return CONSOLIDATE          
     else:
         logger.info("User %s started the conversation.", user.first_name)
         if user not in START:
@@ -103,41 +118,19 @@ def start_command(update, context):
             )
         else:
             keyboard = [
-                [InlineKeyboardButton("Restart Bot " + u'\U0001F916', callback_data=str(RESTART))],
-                [InlineKeyboardButton("Continue from the previous", callback_data=str(BACK))]
+                [InlineKeyboardButton("Plan an activity", callback_data=str(PLAN))],
+                [InlineKeyboardButton("Upcoming activities", callback_data=str(UPCOMING))],
+                [InlineKeyboardButton("Past activities", callback_data=str(PAST))],
+                [InlineKeyboardButton("Help", callback_data=str(HELP))],
+                [InlineKeyboardButton("Exit", callback_data=str(END))]
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
             update.message.reply_text(
-                f"Hello {user.first_name} ! GaiGai Bot has started, do you wish to restart?",
+                f"GaiGai Bot has restarted. \nClick the options below to start planning!",
                 reply_markup=reply_markup
             )
         return FIRST
-
-
-########################################
-############ RESTART ###################
-########################################
-
-def restart(update, context):
-    query = update.callback_query
-    keyboard = [
-        [InlineKeyboardButton("Plan an activity", callback_data=str(PLAN))],
-        [InlineKeyboardButton("Upcoming activities", callback_data=str(UPCOMING))],
-        [InlineKeyboardButton("Past activities", callback_data=str(PAST))],
-        [InlineKeyboardButton("Help", callback_data=str(HELP))],
-        [InlineKeyboardButton("Exit", callback_data=str(END))]
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    query.message.reply_text(
-        f"GaiGai Bot has restarted. \nClick the options below to start planning!",
-        reply_markup=reply_markup
-    )
-    return FIRST
-
-def back(update, context):
-    print(update)
-    query = update.callback_query
-
+    
 
 ########################################
 ############ FIRST BUTTON ##############
@@ -145,6 +138,7 @@ def back(update, context):
 
 def menu(update, context):
     query = update.callback_query
+    SELECT_PAST_ACTIVITY.clear()
     keyboard = [
         [InlineKeyboardButton("Plan an activity", callback_data=str(PLAN))],
         [InlineKeyboardButton("Upcoming activities", callback_data=str(UPCOMING))],
@@ -189,7 +183,10 @@ def upcoming(update, context):
         for session in CONFIRM_MEETING:
             button = [InlineKeyboardButton(session, callback_data=session)]
             keyboard.append(button)
-        back = [InlineKeyboardButton("Back", callback_data=str(MENU))]
+        if query.message.chat.type == "private":
+            back = [InlineKeyboardButton("Back", callback_data=str(MENU))]
+        else:
+            back = [InlineKeyboardButton("Back", callback_data=str(GROUP_MENU))]
         keyboard.append(back)
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.message.reply_text(
@@ -200,10 +197,52 @@ def upcoming(update, context):
 
 def past(update, context):
     query = update.callback_query
-    query.message.reply_text(
-        text="You do not have any past activities",
-    )
-    return FIRST
+    if PAST_ACTIVITY == [] and CONFIRM_MEETING == []:
+        keyboard = [
+            [InlineKeyboardButton("Yes", callback_data=str(PLAN)),
+            InlineKeyboardButton("No", callback_data=str(END))]
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.message.reply_text(
+            text="You do not have any past activities. \nDo you want to start planning?",
+            reply_markup=reply_markup
+        )
+        return FIRST
+    elif PAST_ACTIVITY == [] and CONFIRM_MEETING != []:
+        if query.message.chat.type == "private":
+            keyboard = [
+                [InlineKeyboardButton("Upcoming Activity", callback_data=str(UPCOMING)),
+                InlineKeyboardButton("Plan Activity", callback_data=str(PLAN))],
+                [InlineKeyboardButton("Back", callback_data=str(MENU))],
+            ]
+        else:
+            keyboard = [
+                [InlineKeyboardButton("Upcoming Activity", callback_data=str(UPCOMING))],
+                [InlineKeyboardButton("Back", callback_data=str(GROUP_MENU))],
+            ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.message.reply_text(
+            text="You do not have any past activities. \nBut you have an upcoming activity. \n\nPlease select one",
+            reply_markup=reply_markup
+        )
+        return FIRST
+    else:
+        keyboard = []
+        for key in PAST_ACTIVITY:
+            button = [InlineKeyboardButton(key, callback_data=key)]
+            if button not in keyboard:
+                keyboard.append(button)
+        if query.message.chat.type == "private":
+            back = [InlineKeyboardButton("Back", callback_data=str(MENU))]
+        else:
+            back = [InlineKeyboardButton("Back", callback_data=str(GROUP_MENU))]
+        keyboard.append(back)
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.message.reply_text(
+            text="Select one",
+            reply_markup=reply_markup
+        )
+        return PAST_REVIEW
 
 def help(update, context):
     query = update.callback_query
@@ -255,7 +294,6 @@ def keep_date(update, context):
 
 def keep_date_2(update, context):
     query = update.callback_query
-    CONFIRM_DATE.append(DATES[-1])
     keyboard = []
     for label in checkbox_time:
         check = [InlineKeyboardButton(label, callback_data=label)]
@@ -268,12 +306,11 @@ def no(update, context):
     query = update.callback_query
     keyboard = [
         [InlineKeyboardButton("Link To Google Calendar", callback_data=str(INPUT_PERIOD))],
-        [InlineKeyboardButton("Link To Outlook Calendar", callback_data="outlook_calendar")],
         [InlineKeyboardButton("Type In Your Free Date(s)", callback_data=str(SCHEDULES))],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.message.reply_text(
-        text=f"Link to Google/Outlook Calendar or type in your schedules now! \U0001F4C5",
+        text=f"Link to Google Calendar or type in your schedules now! \U0001F4C5",
         reply_markup=reply_markup
     )
     return SECOND
@@ -290,7 +327,7 @@ def link_google_calendar(update, context):
     start_date = INPUT_GOOGLE_CALENDAR[0].split("-")
     end_date = INPUT_GOOGLE_CALENDAR[-1].split("-")
     creds = get_creds()
-    cal = get_calendar(creds)    
+    cal = get_calendar(creds)
     lst = free_meet(cal, int(start_date[0]), int(start_date[1]), int(start_date[2]), int(end_date[0]), int(end_date[1]), int(end_date[2]))
     if lst == []:
         keyboard = [
@@ -532,22 +569,32 @@ def selected(update, context):
     query.message.reply_text(f"Success! \U0001F604 \nYour selected activity is {ACTIVITIES[-1]}")
     if GROUP == []:
         session = ACTIVITIES[-1] + " on " + CONFIRM_DATE[0]
+        d = CONFIRM_DATE[0].split(" ")[0].split("-")
+        review_dt = datetime.datetime(int(d[0]), int(d[1]), int(d[2]), hour=int(review_hour), minute=int(review_min)) - timedelta(hours=8)
+        context.job_queue.run_once(review, review_dt, context=query.message.chat_id)
         CONFIRM_MEETING.append(session)
+        if INPUT_GOOGLE_CALENDAR != []:
+            creds = get_creds()
+            cal = get_calendar(creds)
+            create_event(cal, ACTIVITIES[-1], "Organised by Let's Go GaiGai", CONFIRM_DATE[-1].split(" ")[0]+"T00:00:00+08:00", CONFIRM_DATE[-1].split(" ")[0]+"T23:59:00+08:00")
         keyboard = [
-            [InlineKeyboardButton("Go back to menu", callback_data=str(MENU)),
-            InlineKeyboardButton("End this session", callback_data=str(END))],
+            [InlineKeyboardButton("YES!!", callback_data=str(INPUT_REMINDER_DATE)),
+            InlineKeyboardButton("Nope, thank you!", callback_data=str(NO_REMINDER))],
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        query.message.reply_text("Select the following.", reply_markup=reply_markup)
+        query.message.reply_text("Do you want a reminder for your meeting?", reply_markup=reply_markup)
         CONFIRM_DATE.clear()
         CONFIRM_TIME.clear()
         ACTIVITIES.clear()
         DATES.clear()
-        return MAIN
+        return REMIND
     else:
         name = str(query.message.chat.first_name)
+        id = str(query.message.chat.id)
         if name not in DONE:
             DONE.append(name)
+        if id not in ID_LIST:
+            ID_LIST.append(id)
         keyboard = [
             [InlineKeyboardButton("I want to add more activities for this date", callback_data=str(SELECT_ACTIVITY))],
             [InlineKeyboardButton("End this session", callback_data=str(END))],
@@ -691,28 +738,45 @@ def time(update, context):
 
 def keep_time(update, context):
     query = update.callback_query
-    if len(CONFIRM_TIME) == 1:
-        query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]}")
-        update_date = f"{CONFIRM_DATE[-1]} ({CONFIRM_TIME[0]})"
-        CONFIRM_DATE.clear()
-        CONFIRM_DATE.append(update_date)
-    elif len(CONFIRM_TIME) == 2:
-        query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]} and {CONFIRM_TIME[1]}")
-        update_date = f"{CONFIRM_DATE[-1]} ({CONFIRM_TIME[0]} and {CONFIRM_TIME[1]})"
-        CONFIRM_DATE.clear()
-        CONFIRM_DATE.append(update_date)
+    if SELECT_PAST_ACTIVITY != []:
+        if len(CONFIRM_TIME) == 1:
+            query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]}")
+            update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]})"
+            CONFIRM_DATE.append(update_date)
+            confirmation(query, ACTIVITIES[-1])
+            return SIXTH
+        elif len(CONFIRM_TIME) == 2:
+            query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]} and {CONFIRM_TIME[1]}")
+            update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]} and {CONFIRM_TIME[1]})"
+            CONFIRM_DATE.append(update_date)
+            confirmation(query, ACTIVITIES[-1])
+            return SIXTH
+        else:
+            query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]} to {CONFIRM_TIME[-1]}")
+            update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]} to {CONFIRM_TIME[-1]})"
+            CONFIRM_DATE.append(update_date)
+            confirmation(query, ACTIVITIES[-1])
+            return SIXTH
     else:
-        query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]} to {CONFIRM_TIME[-1]}")
-        update_date = f"{CONFIRM_DATE[-1]} ({CONFIRM_TIME[0]} to {CONFIRM_TIME[-1]})"
-        CONFIRM_DATE.clear()
-        CONFIRM_DATE.append(update_date)
-    keyboard = [
-        [InlineKeyboardButton("Yes, I have an activity in mind!", callback_data=str(ACTIVITY))],
-        [InlineKeyboardButton("No.. Can you help me?", callback_data=str(CATEGORY))],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    query.message.reply_text("Do you have an activity in mind?", reply_markup=reply_markup)
-    return THIRD
+        if len(CONFIRM_TIME) == 1:
+            query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]}")
+            update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]})"
+            CONFIRM_DATE.append(update_date)
+        elif len(CONFIRM_TIME) == 2:
+            query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]} and {CONFIRM_TIME[1]}")
+            update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]} and {CONFIRM_TIME[1]})"
+            CONFIRM_DATE.append(update_date)
+        else:
+            query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]} to {CONFIRM_TIME[-1]}")
+            update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]} to {CONFIRM_TIME[-1]})"
+            CONFIRM_DATE.append(update_date)
+        keyboard = [
+            [InlineKeyboardButton("Yes, I have an activity in mind!", callback_data=str(ACTIVITY))],
+            [InlineKeyboardButton("No.. Can you help me?", callback_data=str(CATEGORY))],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        query.message.reply_text("Do you have an activity in mind?", reply_markup=reply_markup)
+        return THIRD
 
     
 ########################################
@@ -735,10 +799,16 @@ def information(update, context):
     A1_map = details[1]
     A1_link = details[2]  
     query.message.reply_text(f"Details: \nDate: {d} \nTime: {t} \nActivity: {a} \n\nDescription: {A1_desc} \nLocation: {A1_map} \nWebsite: {A1_link}")
-    keyboard = [
-        [InlineKeyboardButton("Go back to menu", callback_data=str(MENU))],
-        [InlineKeyboardButton("End this session", callback_data=str(END))],
-    ]
+    if query.message.chat.type == "private":
+        keyboard = [
+            [InlineKeyboardButton("Go back to menu", callback_data=str(MENU))],
+            [InlineKeyboardButton("End this session", callback_data=str(END))],
+        ]
+    else:
+        keyboard = [
+            [InlineKeyboardButton("Go back to menu", callback_data=str(GROUP_MENU))],
+            [InlineKeyboardButton("End this session", callback_data=str(END))],
+        ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     query.message.reply_text("Select the following.", reply_markup=reply_markup)
     return MAIN
@@ -752,12 +822,18 @@ def consolidate_poll(update, context):
     query = update.callback_query
     if len(DONE) == TOTAL_VOTER_COUNT[-1]:
         remove_duplicates = []
-        [remove_duplicates.append(x) for x in CONFIRM_DATE if x not in remove_duplicates] #remove duplicates
+        new_confirm_date = []
+        for d in CONFIRM_DATE:
+            new_confirm_date.append(d.split(" ")[0])
+        c = Counter(new_confirm_date)
+        for tuple in c.items():
+            if tuple[1] > 1:
+                remove_duplicates.append(tuple[0])
         if len(remove_duplicates) > 1:
             questions = remove_duplicates
             message = context.bot.send_poll(
                 update.effective_chat.id,
-                "These are your common free dates. Please select you preferred date(s).",
+                f"These are your common free dates. Please select you preferred date(s).",
                 questions,
                 is_anonymous=False,
                 allows_multiple_answers=True,
@@ -771,15 +847,24 @@ def consolidate_poll(update, context):
                 }
             }
             context.bot_data.update(payload)
-        else:
+        elif len(remove_duplicates) == 1:
             keyboard = [
                 [InlineKeyboardButton("Yes", callback_data=str(GROUP_ACTIVITY)),
                  InlineKeyboardButton("No", callback_data=str(GROUP_DATE))],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            context.bot.send_message(update.effective_chat.id, f"You have one common free date on {remove_duplicates[-1]}. \nWould you like to proceed?", reply_markup=reply_markup)
+            context.bot.send_message(update.effective_chat.id, f"You have one common free date on {remove_duplicates[-1]}. \nWould you like to proceed? \n\nNOTE: Only {CONTROL_MAN[-1]} can interact with the bot.", reply_markup=reply_markup)
             GROUP_CONFIRM_DATE.append(remove_duplicates[-1])
             return CONSOLIDATE
+        else:
+            keyboard = [
+                [InlineKeyboardButton("Yes", callback_data=str(MONTHLY_REMINDER)),
+                 InlineKeyboardButton("No", callback_data=str(GROUP_MENU))],
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            context.bot.send_message(update.effective_chat.id, f"There are no common free date among the participants in the group. \nWould you like to organize the meet up next month instead? \n\nNOTE: Only {CONTROL_MAN[-1]} can interact with the bot.", reply_markup=reply_markup)
+            return CONSOLIDATE
+
     elif DONE == []:
         keyboard = [
             [InlineKeyboardButton("Refresh", callback_data=str(CONSOLIDATE_POLL))],
@@ -830,19 +915,27 @@ def group_activity(update, context):
         ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         GROUP_CONFIRM_ACTIVITY.append(remove_activity_duplicates[-1])
-        context.bot.send_message(update.effective_chat.id, f"You have one activity for the meeting: {remove_activity_duplicates[-1]}. \nWould you like to proceed?", reply_markup=reply_markup)
+        context.bot.send_message(update.effective_chat.id, f"You have one activity for the meeting: {remove_activity_duplicates[-1]}. \nWould you like to proceed? \n\nNOTE: Only {CONTROL_MAN[-1]} can interact with the bot.", reply_markup=reply_markup)
         return CONSOLIDATE
 
 def group_session(update, context):
     session = GROUP_CONFIRM_ACTIVITY[-1] + " on " + GROUP_CONFIRM_DATE[-1]
+    d = GROUP_CONFIRM_DATE[-1].split(" ")[0].split("-")
+    review_dt = datetime.datetime(int(d[0]), int(d[1]), int(d[2]), hour=int(review_hour), minute=int(review_min)) - timedelta(hours=8)
+    for id in ID_LIST:
+        context.job_queue.run_once(review, review_dt, context=id)
     context.bot.send_message(update.effective_chat.id, f"Success! \U0001F604 \n\n{GROUP[0]} has a meeting doing {session}")
+    if INPUT_GOOGLE_CALENDAR != []:
+        creds = get_creds()
+        cal = get_calendar(creds)
+        create_event(cal, GROUP_CONFIRM_ACTIVITY[-1], "Organised by Let's Go GaiGai", GROUP_CONFIRM_DATE[0].split(" ")[0]+"T00:00:00+08:00", GROUP_CONFIRM_DATE[0].split(" ")[0]+"T23:59:00+08:00")
     CONFIRM_MEETING.append(session)
     keyboard = [
-        [InlineKeyboardButton("Go back to menu", callback_data=str(GROUP_MENU)),
-         InlineKeyboardButton("End this session", callback_data=str(END))],
+        [InlineKeyboardButton("YES!!", callback_data=str(INPUT_REMINDER_DATE)),
+         InlineKeyboardButton("Nope, thank you!", callback_data=str(NO_REMINDER))],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(update.effective_chat.id, "Select the following.", reply_markup=reply_markup)
+    context.bot.send_message(update.effective_chat.id, "Do you want a reminder for your meetings?", reply_markup=reply_markup)
     CONFIRM_DATE.clear()
     CONFIRM_TIME.clear()
     ACTIVITIES.clear()
@@ -851,25 +944,16 @@ def group_session(update, context):
     GROUP_CONFIRM_ACTIVITY.clear()
     TOTAL_VOTER_COUNT.clear()
     DONE.clear()
-    return CONSOLIDATE
-    
-    '''
-    keyboard = [
-        [InlineKeyboardButton("YES!!", callback_data=str(INPUT_REMINDER_DATE)),
-         InlineKeyboardButton("Nope, thank you!", callback_data=str(NO_REMINDER))],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(update.effective_chat.id, "Do you want add reminder for this meeting?", reply_markup=reply_markup)
-    '''
+    return REMIND
 
 def group_date(update, context):
     query = update.callback_query
-    query.message.reply_text(f"Type in your schedule(s) in this format. \n\nYYYY-MM-DD (TIME) \nYYYY-MM-DD (TIME) \n\nRemember to reply to this message so I can capture your input! \U0001F916")
+    context.bot.send_message(update.effective_chat.id, f"Type in your schedule(s) in this format. \n\nYYYY-MM-DD (TIME) \nYYYY-MM-DD (TIME) \n\nRemember to reply to this message so I can capture your input! \U0001F916")
     return GROUP_INPUT_DATE
 
 def group_category(update, context):
     query = update.callback_query
-    query.message.reply_text(f"Please type in the activity name \n\nRemember to reply to this message so I can capture your input! \U0001F916")
+    context.bot.send_message(update.effective_chat.id, f"Please type in the activity name \n\nRemember to reply to this message so I can capture your input! \U0001F916")
     return GROUP_INPUT_ACTIVITY
 
 def group_menu(update, context):
@@ -880,12 +964,24 @@ def group_menu(update, context):
         [InlineKeyboardButton("Exit", callback_data=str(END))]
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    query.message.reply_text(
+    context.bot.send_message(update.effective_chat.id,
         f"Welcome to GaiGai Bot Menu! \U0001F916 \nClick the options below to continue. \n\nYou may also click /start at your personal chat to create another session",
         reply_markup=reply_markup
     )
     return FIRST
 
+def monthly_reminder(update, context): ## reminder to organize a meetup every 1st day of the month 
+    query = update.callback_query
+    t = datetime.time(hour=14, minute=0) # 14,0 is 9am reminder on 1st day of the month 
+    context.job_queue.run_monthly(monthly, t, 1, context=GROUP_ID[-1])
+    keyboard = [
+        [InlineKeyboardButton("Go back to menu", callback_data=str(GROUP_MENU))],
+        [InlineKeyboardButton("End this session", callback_data=str(END))],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    context.bot.send_message(update.effective_chat.id, f"We have added a reminder for you to organize meet up next month! \U0001F916", reply_markup=reply_markup)
+    return CONSOLIDATE
+     
 
 ########################################
 ########## GROUP INPUTS ################
@@ -935,17 +1031,17 @@ def receive_poll_answer(update, context):
                     InlineKeyboardButton("No", callback_data=str(GROUP_DATE))],
                 ]
                 reply_markup = InlineKeyboardMarkup(keyboard)
-                context.bot.send_message(answered_poll["chat_id"], f"Would you like to proceed?", reply_markup=reply_markup)
+                context.bot.send_message(answered_poll["chat_id"], f"Would you like to proceed? \n\nNOTE: Only {CONTROL_MAN[-1]} can interact with the bot.", reply_markup=reply_markup)
                 POLL_LIST.clear()
                 return CONSOLIDATE
         except ValueError:
             GROUP_CONFIRM_ACTIVITY.append(answer_string)
             keyboard = [
-            [InlineKeyboardButton("Yes", callback_data=str(GROUP_SESSION)),
-             InlineKeyboardButton("No", callback_data=str(GROUP_CATEGORY))],
+                [InlineKeyboardButton("Yes", callback_data=str(GROUP_SESSION)),
+                InlineKeyboardButton("No", callback_data=str(GROUP_CATEGORY))],
             ]
             reply_markup = InlineKeyboardMarkup(keyboard)
-            context.bot.send_message(answered_poll["chat_id"], f"Would you like to proceed?", reply_markup=reply_markup)
+            context.bot.send_message(answered_poll["chat_id"], f"Would you like to proceed? \n\nNOTE: Only {CONTROL_MAN[-1]} can interact with the bot.", reply_markup=reply_markup)
             POLL_LIST.clear()
             return CONSOLIDATE
         
@@ -956,58 +1052,141 @@ def receive_poll_answer(update, context):
 
 def no_reminder(update, context):
     query = update.callback_query
-    keyboard = [
-        [InlineKeyboardButton("Go back to menu", callback_data=str(MENU)),]
-        [InlineKeyboardButton("End this session", callback_data=str(END))],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    query.message.reply_text("Select the following.", reply_markup=reply_markup)
-    return MAIN
+    if GROUP == []:
+        keyboard = [
+            [InlineKeyboardButton("Go back to menu", callback_data=str(MENU))],
+            [InlineKeyboardButton("End this session", callback_data=str(END))],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if REMINDER_DATE == []:
+            query.message.reply_text("Select the following.", reply_markup=reply_markup)
+        else:
+            query.message.reply_text("A reminder has been set! \nSelect the following.", reply_markup=reply_markup)
+        return MAIN
+    else:
+        keyboard = [
+            [InlineKeyboardButton("Go back to menu", callback_data=str(GROUP_MENU))],
+            [InlineKeyboardButton("End this session", callback_data=str(END))],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        if REMINDER_DATE == []:
+            context.bot.send_message(update.effective_chat.id, "Select the following.", reply_markup=reply_markup)
+        else:
+            context.bot.send_message(update.effective_chat.id, "A reminder has been set! \n\nSelect the following.", reply_markup=reply_markup)
+        return CONSOLIDATE
 
 def input_reminder_date(update, context):
     query = update.callback_query
-    query.message.reply_text(f"Type in your reminder datetime in this format. \nYYYY-MM-DD HH:MM \n\nRemember to reply to this message so I can capture your input! \U0001F916")
+    if GROUP == []:
+        query.message.reply_text(f"Type in your reminder datetime in this format. \nYYYY-MM-DD HH:MM")
+    else:
+        context.bot.send_message(update.effective_chat.id, f"Type in your reminder datetime in this format. \nYYYY-MM-DD HH:MM \n\nRemember to reply to this message so I can capture your input! \U0001F916")
     return USER_INPUT_REMINDER
 
 def user_input_reminder(update, context):
-    input = update.message.text
-    string = input.split("\n")
-    for date_time in string:
-        date_string = date_time.split(" ")[0]
-        date_format = '%Y-%m-%d'
-        try:
-            dateObject = datetime.datetime.strptime(date_string, date_format)
-            REMINDER_DATE.append(date_time)
-        except ValueError:
-            update.message.reply_text("Incorrect data format, should be YYYY-MM-DD HH:MM. \nKindly type your reminder date again")
-            return USER_INPUT_REMINDER
+    string = update.message.text
+    date_format = '%Y-%m-%d %H:%M'
+    try:
+        dateObject = datetime.datetime.strptime(string, date_format)
+        REMINDER_DATE.append(string)
+    except ValueError:
+        update.message.reply_text("Incorrect data format, should be YYYY-MM-DD HH:MM. \nKindly type your reminder date again")
+        return USER_INPUT_REMINDER
+    if dateObject < datetime.datetime.now():
+        update.message.reply_text("Reminder datetime will need to be a later time. \nKindly type your datetime again.")
+        return USER_INPUT_REMINDER
     keyboard = [
-        [InlineKeyboardButton("Yes", callback_data=str(SET_REMINDER)),
-        InlineKeyboardButton("No", callback_data=str(INPUT_REMINDER_DATE))],
+        [InlineKeyboardButton("Yes", callback_data=str(NO_REMINDER)),
+         InlineKeyboardButton("No", callback_data=str(INPUT_REMINDER_DATE))],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    update.message.reply_text(f"You will be reminded on {input} \n\nDo you want to confirm?", reply_markup=reply_markup)
+    d = REMINDER_DATE[-1].split(" ")[0].split("-")
+    t = REMINDER_DATE[-1].split(" ")[1].split(":")
+    reminder_dt = datetime.datetime(int(d[0]), int(d[1]), int(d[2]), hour=int(t[0]), minute=int(t[1])) - timedelta(hours=8)
+    context.job_queue.run_once(reminder_msg, reminder_dt, context=update.message.chat_id)
+    context.bot.send_message(update.effective_chat.id, f"You will be reminded on {string} \n\nDo you want to confirm?", reply_markup=reply_markup)
     return REMIND
 
-def set_reminder(update, context):
-    query = update.callback_query
-    date = REMINDER_DATE[0].split(" ")[0].split("-")
-    time = REMINDER_DATE[0].split(" ")[1].split(":")
-    t = datetime.datetime(int(date[0]), int(date[1]), int(date[2]), hour=int(time[0]), minute=int(time[1]))
-    context.job_queue.run_once(reminder_msg, when=t, context=query.message.chat_id)
-    keyboard = [
-        [InlineKeyboardButton("Go back to menu", callback_data=str(GROUP_MENU)),]
-        [InlineKeyboardButton("End this session", callback_data=str(END))],
-    ]
-    reply_markup = InlineKeyboardMarkup(keyboard)
-    context.bot.send_message(update.effective_chat.id, "A reminder has been set! \nSelect one.", reply_markup=reply_markup)
-    return CONSOLIDATE
+def reminder_msg(context): 
+    str = ""
+    for upcoming in CONFIRM_MEETING:
+        if str == "":
+            str = upcoming
+        else:
+            str = str + " \n" + upcoming
+    context.bot.send_message(context.job.context, text=f"Reminder \U0001F514 \n\nThe following is your upcoming activity: \n\n{str}") 
 
-def reminder_msg(context: CallbackContext):
-    activity = CONFIRM_MEETING[0]
-    job = context.job
-    context.bot.send_message(chat_id=job.context, text=f"Reminder: You have {activity}")
-    return CONSOLIDATE
+def monthly(context: CallbackContext):
+    context.bot.send_message(context.job.context, text="Hi :)! Why not organize a meetup with your friends now? Send /start@gaigai_bot to me and Let's Go GaiGai !!")
+
+########################################
+############ REVIEWS ###################
+########################################
+
+def review(context: CallbackContext):
+    context.bot.send_message(context.job.context, text=f"Review Time! \U0000270F \n\nHow is your meeting session for {CONFIRM_MEETING[0]} with your friends? \n\nShare your experience with us")
+    return USER_INPUT_REVIEWS
+
+def user_input_review(update, context):
+    input = update.message.text
+    PAST_ACTIVITY.append(CONFIRM_MEETING[0].split(" on ")[0])
+    for m in CONFIRM_MEETING:
+        if m in PAST_ACTIVITY:
+            CONFIRM_MEETING.remove(m)
+    REVIEW_LST.append([PAST_ACTIVITY[-1]]) 
+    REVIEW_LST[-1].append(input) 
+    keyboard = []
+    for star in RATING_LIST:
+        keyboard.append([InlineKeyboardButton(star, callback_data=star)])
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    context.bot.send_message(update.effective_chat.id, f"Please rate the meeting session!", reply_markup=reply_markup)
+    return REVIEWS
+
+def rating(update, context):
+    query = update.callback_query
+    choice = query.data
+    REVIEW_LST[-1].append(choice) 
+    result = []
+    for l in REVIEW_LST:
+        for i in l:
+            if PAST_ACTIVITY[-1] in i:
+                result.append(l[1:])
+    USER_REVIEW[PAST_ACTIVITY[-1]] = result
+    context.bot.send_message(update.effective_chat.id, "Thank you for sharing!")
+    end(update, context)
+    return ConversationHandler.END
+
+########################################
+########### PAST REVIEW ################
+########################################
+
+def past_review(update, context):
+    query = update.callback_query
+    choice = query.data
+    lst = USER_REVIEW.get(choice)
+    context.bot.send_message(update.effective_chat.id, f"Activity: {choice}")
+    for i in lst:
+        rating = i[1] 
+        review = i[0]
+        context.bot.send_message(update.effective_chat.id, f"Rating: {rating} \nReview: {review}")
+    if query.message.chat.type == "group":
+        keyboard = [
+            [InlineKeyboardButton("Go back to menu", callback_data=str(GROUP_MENU))],
+            [InlineKeyboardButton("End this session", callback_data=str(END))],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        context.bot.send_message(update.effective_chat.id, f"Select one", reply_markup=reply_markup)
+        return CONSOLIDATE
+    else:
+        keyboard = [
+            [InlineKeyboardButton("Yes", callback_data=str(PLAN)),
+             InlineKeyboardButton("No", callback_data=str(MENU))],
+        ]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        SELECT_PAST_ACTIVITY.append(choice)
+        context.bot.send_message(update.effective_chat.id, f"Do you wish to choose {choice} as your new meeting session's activity?", reply_markup=reply_markup)
+        return FIRST
+
 
 ########################################
 ############### END ####################
@@ -1017,7 +1196,11 @@ def end(update, context):
     query = update.callback_query
     if GROUP != [] and DONE != []:
         query.message.reply_text(f"Thank you for your inputs! \U0001F929 \nYou may now click 'View Results' in the group chat (if haven't) or click 'Refresh' to view the poll!")
-    query.message.reply_text(f"See you next time! \U0001FAE1")
+        query.message.reply_text(f"See you next time! \U0001FAE1")
+    elif query.message.chat.type == "private":
+        query.message.reply_text(f"See you next time! \U0001FAE1 \n\nClick /start to start Let's Go GaiGai privately! \nOr go to your group chat and click /start@gaigai_bot!")
+    else:
+        query.message.reply_text(f"See you next time! \U0001FAE1")
     START.clear()
     return ConversationHandler.END
 
