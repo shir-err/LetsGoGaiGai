@@ -164,6 +164,7 @@ def create_event(cal, name, des, startdt, enddt):
     event = cal.events().insert(calendarId='primary', body=event).execute()
     print('Event created: %s' % (event.get('htmlLink')))
 
+'''
 def set_reminder(bot, update, job_queue, year, month, day):
     bot.send_message(chat_id = update.message.chat_id, text = "A reminder has been set!")
     t = datetime.datetime(year, month, day)
@@ -172,6 +173,7 @@ def set_reminder(bot, update, job_queue, year, month, day):
 def reminder_msg(bot, update):
     message = "Hello! This is a reminder that you have an upcoming activity" #: " + event -> where event holds the name of the activity
     bot.send_message(chat_id = update.message.chat_id, text = message)
+'''
 
 # ## test with schedule python
 # def create_reminder(event):
