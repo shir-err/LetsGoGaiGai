@@ -208,7 +208,7 @@ def reminder_msg(bot, update):
 #       "timeMin": startdt.isoformat(),
 #       "timeMax": enddt.isoformat(),
 #       "timeZone": 'Asia/Singapore',
-#       "items": [{"id": 'pinkyse6@gmail.com'}]
+#       "items": [{"id": 'tan.shirer@gmail.com'}]
 #     }
 
 #     eventsResult = cal.freebusy().query(body=freebusy_query) ## full day events are automatically seen as "free" in google calendar so it won't be flagged as busy
