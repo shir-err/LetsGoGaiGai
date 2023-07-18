@@ -31,7 +31,7 @@ logger = logging.getLogger(__name__)
 # Stages
 FIRST, SECOND, THIRD, FOURTH, FIFTH, SIXTH, USER_INPUT_ACTIVITY, CALENDAR, TIME, INFORMATION, MAIN, FOOD_LST, CONSOLIDATE, POLL_ANSWERS, USER_INPUT_SCHEDULES, GROUP_INPUT_DATE, GROUP_INPUT_ACTIVITY, USER_INPUT_GOOGLE_CALENDAR, REMIND, USER_INPUT_REMINDER, USER_INPUT_REVIEWS, REVIEWS, PAST_REVIEW = range(23)
 # Callback data
-PLAN, UPCOMING, PAST, HELP, YES, NO, CHANGE_DATE, KEEP_DATE, KEEP_TIME, KEEP_DATE_2, ACTIVITY, CATEGORY, ADVENTURE, ATTRACTION, FOOD, OTHER, ACTIVITY_OPTION_1, ACTIVITY_OPTION_2, ACTIVITY_OPTION_3, ACTIVITY_RESULT_1, ACTIVITY_RESULT_2, ACTIVITY_RESULT_3, MORE, SELECTED, DECLINE, MENU, END, BACK, SCHEDULES, INPUT_PERIOD, LINK_GOOGLE_CALENDAR, INPUT_REMINDER_DATE, NO_REMINDER, MONTHLY_REMINDER = range(34)
+PLAN, UPCOMING, PAST, HELP, YES, NO, CHANGE_DATE, KEEP_DATE, KEEP_TIME, KEEP_DATE_2, ACTIVITY, CATEGORY, ADVENTURE, ATTRACTION, FOOD, OTHER, ACTIVITY_OPTION_1, ACTIVITY_OPTION_2, ACTIVITY_OPTION_3, ACTIVITY_RESULT_1, ACTIVITY_RESULT_2, ACTIVITY_RESULT_3, MORE, SELECTED, DECLINE, MENU, END, BACK, SCHEDULES, INPUT_PERIOD, LINK_GOOGLE_CALENDAR, INPUT_REMINDER_DATE, NO_REMINDER, MONTHLY_REMINDER, CONFIRMATION = range(35)
 CONSOLIDATE_POLL, GROUP_ACTIVITY, GROUP_DATE, SELECT_ACTIVITY, GROUP_SESSION, GROUP_MENU, GROUP_CATEGORY, GROUP_DATE = range(8)
 
 ########################################
@@ -74,8 +74,8 @@ REVIEW_LST = []
 RATING_LIST = ['\u2B50', '\u2B50 \u2B50', '\u2B50 \u2B50 \u2B50', '\u2B50 \u2B50 \u2B50 \u2B50', '\u2B50 \u2B50 \u2B50 \u2B50 \u2B50']
 USER_REVIEW = {}
 
-review_hour = 17
-review_min = 1
+review_hour = 0
+review_min = 7
 
 ########################################
 ########### COMMON COMMANDS ############
@@ -168,10 +168,16 @@ def plan(update, context):
 def upcoming(update, context):
     query = update.callback_query
     if CONFIRM_MEETING == []:
-        keyboard = [
-            [InlineKeyboardButton("Yes", callback_data=str(PLAN)),
-            InlineKeyboardButton("No", callback_data=str(END))]
-        ]
+        if query.message.chat.type == "private":
+            keyboard = [
+                [InlineKeyboardButton("Yes", callback_data=str(PLAN)),
+                InlineKeyboardButton("No", callback_data=str(MENU))]
+            ]
+        else:
+            keyboard = [
+                [InlineKeyboardButton("Yes", callback_data=str(PLAN)),
+                InlineKeyboardButton("No", callback_data=str(GROUP_MENU))]
+            ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.message.reply_text(
             text="You do not have any upcoming activities. \nDo you want to start planning?",
@@ -198,10 +204,16 @@ def upcoming(update, context):
 def past(update, context):
     query = update.callback_query
     if PAST_ACTIVITY == [] and CONFIRM_MEETING == []:
-        keyboard = [
-            [InlineKeyboardButton("Yes", callback_data=str(PLAN)),
-            InlineKeyboardButton("No", callback_data=str(END))]
-        ]
+        if query.message.chat.type == "private":
+            keyboard = [
+                [InlineKeyboardButton("Yes", callback_data=str(PLAN)),
+                InlineKeyboardButton("No", callback_data=str(MENU))]
+            ]
+        else:
+            keyboard = [
+                [InlineKeyboardButton("Yes", callback_data=str(PLAN)),
+                InlineKeyboardButton("No", callback_data=str(GROUP_MENU))]
+            ]
         reply_markup = InlineKeyboardMarkup(keyboard)
         query.message.reply_text(
             text="You do not have any past activities. \nDo you want to start planning?",
@@ -346,7 +358,10 @@ def link_google_calendar(update, context):
             else:
                 str = str + " \n" + free_date 
         query.message.reply_text(f"Your free dates are: \n{str}")
-        select_activity(update, context)
+        if SELECT_PAST_ACTIVITY == []:
+            select_activity(update, context)
+        else:
+            confirmation(update, SELECT_PAST_ACTIVITY[-1])
         return THIRD
 
 
@@ -559,6 +574,16 @@ def confirmation(query, activity):
     query.message.reply_text(f"Do you want to confirm {activity} as your activity?", reply_markup=reply_markup)        
     return SIXTH
 
+def confirmation_activity(update, context):
+    query = update.callback_query
+    keyboard = [
+        [InlineKeyboardButton("Yes", callback_data=str(SELECTED)),
+         InlineKeyboardButton("No", callback_data=str(DECLINE))],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    query.message.reply_text(f"Do you want to confirm {SELECT_PAST_ACTIVITY[-1]} as your activity?", reply_markup=reply_markup)        
+    return SIXTH
+
 
 ########################################
 ############ SIXTH BUTTON ##############
@@ -566,6 +591,9 @@ def confirmation(query, activity):
 
 def selected(update, context):
     query = update.callback_query
+    if SELECT_PAST_ACTIVITY != []:
+        ACTIVITIES.append(SELECT_PAST_ACTIVITY[-1])
+        del SELECT_PAST_ACTIVITY[-1]
     query.message.reply_text(f"Success! \U0001F604 \nYour selected activity is {ACTIVITIES[-1]}")
     if GROUP == []:
         session = ACTIVITIES[-1] + " on " + CONFIRM_DATE[0]
@@ -668,10 +696,16 @@ def message_schedules(update, context):
         if dateObject.date() < date.today():
             update.message.reply_text("Meeting date will need to be today or after today. \nKindly type your date again.")
             return USER_INPUT_SCHEDULES
-    keyboard = [
-        [InlineKeyboardButton("Yes", callback_data=str(SELECT_ACTIVITY)),
-         InlineKeyboardButton("No", callback_data=str(SCHEDULES))],
-    ]
+    if SELECT_PAST_ACTIVITY == []:
+        keyboard = [
+            [InlineKeyboardButton("Yes", callback_data=str(SELECT_ACTIVITY)),
+            InlineKeyboardButton("No", callback_data=str(SCHEDULES))],
+        ]
+    else:
+        keyboard = [
+            [InlineKeyboardButton("Yes", callback_data=str(CONFIRMATION)),
+            InlineKeyboardButton("No", callback_data=str(SCHEDULES))],
+        ]
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text(f"Your free date(s) is/are: \n{input} \n\nDo you want to confirm?", reply_markup=reply_markup)
     return SECOND
@@ -743,20 +777,16 @@ def keep_time(update, context):
             query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]}")
             update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]})"
             CONFIRM_DATE.append(update_date)
-            confirmation(query, ACTIVITIES[-1])
-            return SIXTH
         elif len(CONFIRM_TIME) == 2:
             query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]} and {CONFIRM_TIME[1]}")
             update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]} and {CONFIRM_TIME[1]})"
             CONFIRM_DATE.append(update_date)
-            confirmation(query, ACTIVITIES[-1])
-            return SIXTH
         else:
             query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]} to {CONFIRM_TIME[-1]}")
             update_date = f"{DATES[-1]} ({CONFIRM_TIME[0]} to {CONFIRM_TIME[-1]})"
             CONFIRM_DATE.append(update_date)
-            confirmation(query, ACTIVITIES[-1])
-            return SIXTH
+        confirmation(query, SELECT_PAST_ACTIVITY[-1])
+        return SIXTH
     else:
         if len(CONFIRM_TIME) == 1:
             query.message.reply_text(f"Selected Time: {CONFIRM_TIME[0]}")
@@ -822,13 +852,16 @@ def consolidate_poll(update, context):
     query = update.callback_query
     if len(DONE) == TOTAL_VOTER_COUNT[-1]:
         remove_duplicates = []
-        new_confirm_date = []
-        for d in CONFIRM_DATE:
-            new_confirm_date.append(d.split(" ")[0])
-        c = Counter(new_confirm_date)
-        for tuple in c.items():
-            if tuple[1] > 1:
-                remove_duplicates.append(tuple[0])
+        if len(CONFIRM_DATE) == 1:
+            remove_duplicates.append(CONFIRM_DATE[-1])
+        else:
+            new_confirm_date = []
+            for d in CONFIRM_DATE:
+                new_confirm_date.append(d.split(" ")[0])
+            c = Counter(new_confirm_date)
+            for tuple in c.items():
+                if tuple[1] > 1:
+                    remove_duplicates.append(tuple[0])
         if len(remove_duplicates) > 1:
             questions = remove_duplicates
             message = context.bot.send_poll(
@@ -1130,11 +1163,12 @@ def review(context: CallbackContext):
 def user_input_review(update, context):
     input = update.message.text
     PAST_ACTIVITY.append(CONFIRM_MEETING[0].split(" on ")[0])
-    for m in CONFIRM_MEETING:
-        if m in PAST_ACTIVITY:
-            CONFIRM_MEETING.remove(m)
+    for p in PAST_ACTIVITY:
+        for c in CONFIRM_MEETING:
+            if p in c:
+                CONFIRM_MEETING.remove(c)
     REVIEW_LST.append([PAST_ACTIVITY[-1]]) 
-    REVIEW_LST[-1].append(input) 
+    REVIEW_LST[-1].append(input)
     keyboard = []
     for star in RATING_LIST:
         keyboard.append([InlineKeyboardButton(star, callback_data=star)])
@@ -1165,10 +1199,17 @@ def past_review(update, context):
     choice = query.data
     lst = USER_REVIEW.get(choice)
     context.bot.send_message(update.effective_chat.id, f"Activity: {choice}")
+    rating = []
+    review = []
     for i in lst:
-        rating = i[1] 
-        review = i[0]
-        context.bot.send_message(update.effective_chat.id, f"Rating: {rating} \nReview: {review}")
+        ra = i[1]
+        re = i[0]
+        if ra not in rating:
+            rating.append(ra)
+        if re not in review:
+            review.append(re)
+    for j in range(len(rating)):
+        context.bot.send_message(update.effective_chat.id, f"Rating: {rating[j]} \nReview: {review[j]}")
     if query.message.chat.type == "group":
         keyboard = [
             [InlineKeyboardButton("Go back to menu", callback_data=str(GROUP_MENU))],
@@ -1198,7 +1239,7 @@ def end(update, context):
         query.message.reply_text(f"Thank you for your inputs! \U0001F929 \nYou may now click 'View Results' in the group chat (if haven't) or click 'Refresh' to view the poll!")
         query.message.reply_text(f"See you next time! \U0001FAE1")
     elif query.message.chat.type == "private":
-        query.message.reply_text(f"See you next time! \U0001FAE1 \n\nClick /start to start Let's Go GaiGai privately! \nOr go to your group chat and click /start@gaigai_bot!")
+        query.message.reply_text(f"See you next time! \U0001FAE1 \n\nClick /start to start Let's Go GaiGai privately or in your group chat!")
     else:
         query.message.reply_text(f"See you next time! \U0001FAE1")
     START.clear()
