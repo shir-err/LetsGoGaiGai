@@ -46,6 +46,7 @@ def main():
                     CallbackQueryHandler(link_google_calendar, pattern='^' + str(LINK_GOOGLE_CALENDAR) + '$'),
                     CallbackQueryHandler(schedules, pattern='^' + str(SCHEDULES) + '$'),
                     CallbackQueryHandler(select_activity, pattern='^' + str(SELECT_ACTIVITY) + '$'),
+                    CallbackQueryHandler(confirmation_activity, pattern='^' + str(CONFIRMATION) + '$'),
                     CallbackQueryHandler(end, pattern='^' + str(END) + '$')],
 
             THIRD: [CallbackQueryHandler(category, pattern='^' + str(CATEGORY) + '$'),
