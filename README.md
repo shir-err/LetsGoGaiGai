@@ -15,6 +15,8 @@ The Telegram Bot can be accessed via Private Chat and also within a Group Chat. 
 
 In a private chat, the bot comprises four main user-bot interactions - Plan an Activity, Upcoming Activities, Past Activities, and Help. In “Plan an Activity”, the bot will guide the user in organising an outing by prompting the user for necessary details such as the event's date, time, and venue. If the user lacks any of such details, the bot will prompt the user to use its functions to determine these details (e.g.: consolidation of schedule, suggested activities). In “Upcoming Activities”, the bot will store the activities planned by the users and provide more details when clicked. Once the upcoming session has ended, it will be removed from the upcoming activities and added to the past activities. Last but not least, the “Help” button will provide instructions on the usage of GaiGai Bot.
 
+![My Image](Let's Go GaiGai - MENU.jpg)
+
 **Status : Completed [:green_circle:]**
 
 ### Interactable with Telegram Group Settings
