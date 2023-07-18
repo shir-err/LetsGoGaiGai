@@ -14,7 +14,7 @@ def main():
     updater = Updater(token, use_context=True)
 
     # Get the dispatcher to register handlers
-    dp = updater.dispatcher
+    dp = updater.dispatcher              
 
     # Setup conversation handler with the states FIRST and SECOND
     # Use the pattern parameter to pass CallbackQueries with specific
@@ -26,15 +26,16 @@ def main():
         entry_points=[CommandHandler('start', start_command)],
         states={
             MAIN: [CallbackQueryHandler(menu, pattern='^' + str(MENU) + '$'),
+                   CallbackQueryHandler(group_menu, pattern='^' + str(GROUP_MENU) + '$'),
                    CallbackQueryHandler(end, pattern='^' + str(END) + '$')],
 
             FIRST: [CallbackQueryHandler(plan, pattern='^' + str(PLAN) + '$'),
                     CallbackQueryHandler(upcoming, pattern='^' + str(UPCOMING) + '$'),
                     CallbackQueryHandler(past, pattern='^' + str(PAST) + '$'),
                     CallbackQueryHandler(help, pattern='^' + str(HELP) + '$'),
-                    CallbackQueryHandler(restart, pattern='^' + str(RESTART) + '$'),
-                    CallbackQueryHandler(back, pattern='^' + str(BACK) + '$'),
-                    CallbackQueryHandler(end, pattern='^' + str(END) + '$')],
+                    CallbackQueryHandler(end, pattern='^' + str(END) + '$'),
+                    CallbackQueryHandler(group_menu, pattern='^' + str(GROUP_MENU) + '$'),
+                    CallbackQueryHandler(menu, pattern='^' + str(MENU) + '$')],
 
             SECOND: [CallbackQueryHandler(yes, pattern='^' + str(YES) + '$'),
                     CallbackQueryHandler(keep_date, pattern='^' + str(KEEP_DATE) + '$'),
@@ -81,7 +82,12 @@ def main():
                    CallbackQueryHandler(time)],
 
             INFORMATION: [CallbackQueryHandler(menu, pattern='^' + str(MENU) + '$'),
+                          CallbackQueryHandler(group_menu, pattern='^' + str(GROUP_MENU) + '$'),
                           CallbackQueryHandler(information)],
+
+            PAST_REVIEW: [CallbackQueryHandler(menu, pattern='^' + str(MENU) + '$'),
+                          CallbackQueryHandler(group_menu, pattern='^' + str(GROUP_MENU) + '$'),
+                          CallbackQueryHandler(past_review)],
 
             CONSOLIDATE: [CallbackQueryHandler(consolidate_poll, pattern='^' + str(CONSOLIDATE_POLL) + '$'),
                           CallbackQueryHandler(category, pattern='^' + str(CATEGORY) + '$'),
@@ -90,6 +96,7 @@ def main():
                           CallbackQueryHandler(group_menu, pattern='^' + str(GROUP_MENU) + '$'),
                           CallbackQueryHandler(group_category, pattern='^' + str(GROUP_CATEGORY) + '$'),
                           CallbackQueryHandler(group_date, pattern='^' + str(GROUP_DATE) + '$'),
+                          CallbackQueryHandler(monthly_reminder, pattern='^' + str(MONTHLY_REMINDER) + '$'),
                           CallbackQueryHandler(end, pattern='^' + str(END) + '$')],
 
             GROUP_INPUT_DATE: [MessageHandler(Filters.text, group_input_date)],
@@ -98,10 +105,10 @@ def main():
 
             USER_INPUT_REMINDER: [MessageHandler(Filters.text, user_input_reminder)],
 
-            REMIND: [CallbackQueryHandler(input_reminder_date, pattern='^' + str(INPUT_REMINDER_DATE) + '$'),
-                     CallbackQueryHandler(no_reminder, pattern='^' + str(NO_REMINDER) + '$'),
-                     CallbackQueryHandler(set_reminder, pattern='^' + str(SET_REMINDER) + '$')],
+            REVIEWS: [CallbackQueryHandler(rating)],
 
+            REMIND: [CallbackQueryHandler(input_reminder_date, pattern='^' + str(INPUT_REMINDER_DATE) + '$'),
+                     CallbackQueryHandler(no_reminder, pattern='^' + str(NO_REMINDER) + '$')],
         },
         fallbacks=[CommandHandler('start', start_command)]
     )
@@ -109,7 +116,17 @@ def main():
     # Add ConversationHandler to dispatcher that will be used for handling
     # updates
     dp.add_handler(conv_handler)
-    dp.add_handler(PollAnswerHandler(receive_poll_answer))  
+    dp.add_handler(CommandHandler('start', start_command))
+    dp.add_handler(PollAnswerHandler(receive_poll_answer))
+    dp.add_handler(MessageHandler(Filters.text, user_input_review))
+    dp.add_handler(CallbackQueryHandler(consolidate_poll, pattern='^' + str(CONSOLIDATE_POLL) + '$'))
+    dp.add_handler(CallbackQueryHandler(group_activity, pattern='^' + str(GROUP_ACTIVITY) + '$'))
+    dp.add_handler(CallbackQueryHandler(group_session, pattern='^' + str(GROUP_SESSION) + '$'))
+    dp.add_handler(CallbackQueryHandler(group_menu, pattern='^' + str(GROUP_MENU) + '$'))
+    dp.add_handler(CallbackQueryHandler(group_category, pattern='^' + str(GROUP_CATEGORY) + '$'))
+    dp.add_handler(CallbackQueryHandler(group_date, pattern='^' + str(GROUP_DATE) + '$'))
+    dp.add_handler(CallbackQueryHandler(monthly_reminder, pattern='^' + str(MONTHLY_REMINDER) + '$'))
+    dp.add_handler(CallbackQueryHandler(rating))
 
     # log all errors
     dp.add_error_handler(error)
@@ -122,7 +139,6 @@ def main():
     # SIGTERM or SIGABRT. This should be used most of the time, since
     # start_polling() is non-blocking and will stop the bot gracefully.
     updater.idle()
-
 
 if __name__ == '__main__':
     main()
