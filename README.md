@@ -9,6 +9,8 @@ As a busy student, it can be quite time-consuming to compare everyone's schedule
 ## Aim
 To develop a Telegram Bot for people to easily plan their gatherings by recommending various group activities and finding a common free date to hang out for them. The platform would help to automatically update their online schedule with said activity once it has been confirmed to help better plan for future activities.
 
+<img align="center" src="https://github.com/shir-err/LetsGoGaiGai/blob/main/Let's%20Go%20GaiGai%20-%20Poster.jpg">
+
 ## Features
 ### Accessible and Intuitive User Interface
 The Telegram Bot can be accessed via Private Chat and also within a Group Chat. Users can choose to message the bot privately or add the bot to a group chat to allow other participants to interact with the bot.
