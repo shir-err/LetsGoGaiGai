@@ -7,8 +7,8 @@ from serpapi import GoogleSearch
 
 #API_Key
 #api_key = "8b38a0a2de4c3f9ccbb19ec20b57605e14d373ad62df11723ec7c3ce73d44e93" #hl account
-#api_key = "1baa77a7fa374ed6e2ff1b831a0d37fe427f231c9ecb1e1e0a91a71ff8adf35b" #hl's sister account
-api_key = "3dfc85adf51ab0fce6034e5ea02c0e9cb3dd34a80fe2b32762d9e7c736b4990e" #shir er account
+api_key = "1baa77a7fa374ed6e2ff1b831a0d37fe427f231c9ecb1e1e0a91a71ff8adf35b" #hl's sister account
+#api_key = "3dfc85adf51ab0fce6034e5ea02c0e9cb3dd34a80fe2b32762d9e7c736b4990e" #shir er account
 
 #shorten url
 type_tiny = pyshorteners.Shortener()
@@ -81,13 +81,16 @@ def choosen(activity):
    result = search.get_dict()
    try:
       desc = result["knowledge_graph"]["description"]
-      map = type_tiny.tinyurl.short(result["knowledge_graph"]["local_map"]["link"])
+      map = result["knowledge_graph"]["local_map"]["link"]
+      #map = type_tiny.tinyurl.short(result["knowledge_graph"]["local_map"]["link"])
    except:
       desc = result["organic_results"][0]["title"]
       lst = result["search_information"]["menu_items"]
       index = next((index for (index, d) in enumerate(lst) if d["title"] == "Maps"), None)
-      map = type_tiny.tinyurl.short(result["search_information"]["menu_items"][index]["link"])
-   link = type_tiny.tinyurl.short(result["organic_results"][0]["link"])
+      map = result["search_information"]["menu_items"][index]["link"]
+      #map = type_tiny.tinyurl.short(result["search_information"]["menu_items"][index]["link"])
+   link = result["organic_results"][0]["link"]
+   #link = type_tiny.tinyurl.short(result["organic_results"][0]["link"])
    details.append(desc)
    details.append(map)
    details.append(link)
@@ -104,13 +107,16 @@ def top3_options(activity):
    })
    result = search.get_dict()
    O1 = result["organic_results"][0]["title"]
-   O1_link = type_tiny.tinyurl.short(result["organic_results"][0]["link"])
+   O1_link = result["organic_results"][0]["link"]
+   #O1_link = type_tiny.tinyurl.short(result["organic_results"][0]["link"])
    O1_details = [O1, O1_link]
    O2 = result["organic_results"][1]["title"]
-   O2_link = type_tiny.tinyurl.short(result["organic_results"][1]["link"])
+   O2_link = result["organic_results"][1]["link"]
+   #O2_link = type_tiny.tinyurl.short(result["organic_results"][1]["link"])
    O2_details = [O2, O2_link]
    O3 = result["organic_results"][2]["title"]
-   O3_link = type_tiny.tinyurl.short(result["organic_results"][2]["link"])
+   O3_link = result["organic_results"][2]["link"]
+   #O3_link = type_tiny.tinyurl.short(result["organic_results"][2]["link"])
    O3_details = [O3, O3_link]
    details = [O1_details, O2_details, O3_details]
    return details
