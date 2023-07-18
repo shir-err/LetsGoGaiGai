@@ -1,6 +1,9 @@
 # Let's Go GaiGai :dancing_women:
 NUS Orbital 2023 - Team 5702
 
+Developed By :
+Lai Hui Ling (@hhuilingg) , Tan Shir Er (@shir-err)
+
 ## Motivation
 Initiating, organising and scheduling a meetup with your friends can be troublesome as everyone has a different and complex schedule. This is especially so for bigger groups as the tendency for schedule clashes becomes higher. Furthermore, it can be difficult to find activities to do as a group. 
 
@@ -82,10 +85,10 @@ The user is able to:
 
 **Status : Completed [:green_circle:]**
 
-### Set Scheduled Reminders for Groups to Plan Events (Optional)
+### Set Scheduled Monthly Reminders for Groups to Plan Events
 The Telegram Bot is able to send a scheduled message to participants to remind them to plan an activity with the group. This will cater to users who are interested in having monthly meetings, for example, and encourage more consistent meetups despite everyone's busy schedules.
 
 The user is able to:
-1. Set a reminder for the bot to prompt them to organize a meetup
+1. Set a reminder for the bot to prompt them to organize a meetup if there are no common free dates
 
 **Status : Completed [:green_circle:]**
