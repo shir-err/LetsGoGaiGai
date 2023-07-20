@@ -70,12 +70,13 @@ POLL_LIST = []
 REMINDER_DATE = []
 
 PAST_ACTIVITY = []
+TO_BE_REVIEW = []
 REVIEW_LST = []
 RATING_LIST = ['\u2B50', '\u2B50 \u2B50', '\u2B50 \u2B50 \u2B50', '\u2B50 \u2B50 \u2B50 \u2B50', '\u2B50 \u2B50 \u2B50 \u2B50 \u2B50']
 USER_REVIEW = {}
 
-review_hour = 0
-review_min = 7
+review_hour = 22
+review_min = 30
 
 ########################################
 ########### COMMON COMMANDS ############
@@ -852,16 +853,13 @@ def consolidate_poll(update, context):
     query = update.callback_query
     if len(DONE) == TOTAL_VOTER_COUNT[-1]:
         remove_duplicates = []
-        if len(CONFIRM_DATE) == 1:
-            remove_duplicates.append(CONFIRM_DATE[-1])
-        else:
-            new_confirm_date = []
-            for d in CONFIRM_DATE:
-                new_confirm_date.append(d.split(" ")[0])
-            c = Counter(new_confirm_date)
-            for tuple in c.items():
-                if tuple[1] > 1:
-                    remove_duplicates.append(tuple[0])
+        new_confirm_date = []
+        for d in CONFIRM_DATE:
+            new_confirm_date.append(d.split(" ")[0])
+        c = Counter(new_confirm_date)
+        for tuple in c.items():
+            if tuple[1] > 1:
+                remove_duplicates.append(tuple[0])
         if len(remove_duplicates) > 1:
             questions = remove_duplicates
             message = context.bot.send_poll(
@@ -1157,12 +1155,13 @@ def monthly(context: CallbackContext):
 ########################################
 
 def review(context: CallbackContext):
+    TO_BE_REVIEW.append(CONFIRM_MEETING[-1].split(" on ")[0])
     context.bot.send_message(context.job.context, text=f"Review Time! \U0000270F \n\nHow is your meeting session for {CONFIRM_MEETING[0]} with your friends? \n\nShare your experience with us")
     return USER_INPUT_REVIEWS
 
 def user_input_review(update, context):
     input = update.message.text
-    PAST_ACTIVITY.append(CONFIRM_MEETING[0].split(" on ")[0])
+    PAST_ACTIVITY.append(TO_BE_REVIEW[-1])
     for p in PAST_ACTIVITY:
         for c in CONFIRM_MEETING:
             if p in c:
@@ -1204,11 +1203,9 @@ def past_review(update, context):
     for i in lst:
         ra = i[1]
         re = i[0]
-        if ra not in rating:
-            rating.append(ra)
-        if re not in review:
-            review.append(re)
-    for j in range(len(rating)):
+        rating.append(ra)
+        review.append(re)
+    for j in range(len(review)):
         context.bot.send_message(update.effective_chat.id, f"Rating: {rating[j]} \nReview: {review[j]}")
     if query.message.chat.type == "group":
         keyboard = [
@@ -1235,7 +1232,7 @@ def past_review(update, context):
 
 def end(update, context):
     query = update.callback_query
-    if GROUP != [] and DONE != []:
+    if GROUP != [] and DONE != [] and query.message.chat.type == "private":
         query.message.reply_text(f"Thank you for your inputs! \U0001F929 \nYou may now click 'View Results' in the group chat (if haven't) or click 'Refresh' to view the poll!")
         query.message.reply_text(f"See you next time! \U0001FAE1")
     elif query.message.chat.type == "private":
